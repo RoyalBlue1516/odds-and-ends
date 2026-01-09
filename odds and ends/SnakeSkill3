@@ -1,0 +1,130 @@
+using System.Collections;
+using System.Collections.Generic;
+using Unity.Mathematics;
+using UnityEngine;
+using UnityEngine.Tilemaps;
+
+public class SnakeSkill : MonoBehaviour,ISkillHandler
+{
+    float _startRadius=0f;
+    float _endRadius=4f;   
+    float _currentRadius;
+    bool _isSkillActive;
+    bool isSkill;
+    bool _skillSuccess;
+    IEnumerator _skillRoutine;
+    GameObject _clone;
+    [SerializeField] GameObject _rangePrefab;
+    [SerializeField] LayerMask _enemyLayer;
+    [SerializeField] CircleCollider2D _skillRange;
+    [SerializeField] SkillRange _skillRangeScript;
+    
+    PlayerController controller;
+
+    void SkillFalse()
+    {
+        isSkill=false;
+    }
+    void SubscribeEvent()
+    {
+        controller.input.OnSkillPressed += HandlerSkill;
+        controller.input.OnSkillCanceled += HandlerCancelSkill;
+    }
+
+    void OnDisable()
+    {
+        controller.input.OnSkillPressed -= HandlerSkill;
+        controller.input.OnSkillCanceled -= HandlerCancelSkill;
+    }
+    public void UseSkill()
+    {
+        if(controller.playeranimator.GetCurrentStateInfo().IsName("Snake_Skill")) return;
+        isSkill=true;
+        _skillRoutine=SkillRoutine();
+        StartCoroutine(_skillRoutine);
+    }
+     public void CancelSkill()
+    {
+        _isSkillActive=false;
+        if (_skillRangeScript._hitEnemy.Count > 0)
+        {
+            Physics2D.IgnoreLayerCollision(controller.movement.PlayerLayer, controller.movement.EnemyLayer, true);
+            Vector2 dir = _skillRangeScript._hitEnemy[0].transform.position - transform.position;
+            dir.Normalize();
+            Vector2 distance=new Vector2(dir.x * 6f, 0f);
+            transform.localScale= dir.x>0? new Vector2(1f,1f) : new Vector2(-1f,1f);
+            controller.playeranimator.animator.SetTrigger("SkillFire");
+            controller.movement.Rb.MovePosition(controller.movement.Rb.position+distance);
+            _skillSuccess=true;
+            yield return new WairForSeconds(0.15f);
+        }
+        else
+        {
+            _skillSuccess=false;
+        }
+        Debug.Log("skill end");
+        controller.playeranimator.animator.SetBool("Skill",false);
+        Physics2D.IgnoreLayerCollision(controller.movement.PlayerLayer, controller.movement.EnemyLayer, false);
+        _skillRange.enabled=false;
+        Destroy(_clone);
+        _currentRadius=_startRadius;
+        controller.movement.Rb.gravityScale = controller.movement.OriginalGravity;
+        if(!_skillSuccess)
+            SkillFalse();
+    }
+    IEnumerator SkillRoutine()
+    {
+        _skillRange.enabled=true;
+        controller.movement.Rb.gravityScale = 0f;
+        controller.movement.Rb.linearVelocity = Vector2.zero;
+        _isSkillActive = true;
+        controller.playeranimator.animator.SetBool("Skill",true);
+        Debug.Log("skill start");
+        SpawnPrefab();
+        float t = 0f;
+        while (t <= 1f&&_isSkillActive)
+        {
+            t += Time.deltaTime;
+            _currentRadius = Mathf.Lerp(_startRadius, _endRadius, t);
+            _skillRange.radius=_currentRadius;
+            yield return null;
+        }
+        _currentRadius = _isSkillActive ? _endRadius : _startRadius;
+    }
+    void OnDrawGizmos()
+    {
+        Gizmos.color = Color.blue;
+        Gizmos.DrawWireSphere(transform.position,_currentRadius);
+    }
+    void SpawnPrefab()
+    {
+        _clone = Instantiate(_rangePrefab, transform.position,quaternion.identity);
+    }
+    public bool CheckSkill()
+    {
+        return isSkill;
+    }
+    public void HandlerSkill()
+    {
+        UseSkill();
+    }
+    public void HandlerCancelSkill()
+    {
+        CancelSkill();
+    }
+    void Awake()
+    {
+        controller = GetComponent<PlayerController>();
+    }
+    // Start is called once before the first execution of Update after the MonoBehaviour is created
+    void Start()
+    {
+        SubscribeEvent();
+    }
+
+    // Update is called once per frame
+    void Update()
+    {
+
+    }
+}
