@@ -43,7 +43,7 @@ public class SnakeSkill : MonoBehaviour,ISkillHandler
         _skillRoutine=SkillRoutine();
         StartCoroutine(_skillRoutine);
     }
-    Ienumerator CancelSkill()
+    IEnumerator CancelSkill()
     {
         _isSkillActive=false;
         if (_skillRangeScript._hitEnemy.Count > 0)
@@ -56,7 +56,7 @@ public class SnakeSkill : MonoBehaviour,ISkillHandler
             controller.playeranimator.animator.SetTrigger("SkillFire");
             controller.movement.Rb.MovePosition(controller.movement.Rb.position+distance);
             _skillSuccess=true;
-            yield return new WairForSeconds(0.15f);
+            yield return new WaitForSeconds(0.15f);
         }
         else
         {
