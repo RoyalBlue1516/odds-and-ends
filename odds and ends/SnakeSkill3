@@ -43,7 +43,7 @@ public class SnakeSkill : MonoBehaviour,ISkillHandler
         _skillRoutine=SkillRoutine();
         StartCoroutine(_skillRoutine);
     }
-     public void CancelSkill()
+    Ienumerator CancelSkill()
     {
         _isSkillActive=false;
         if (_skillRangeScript._hitEnemy.Count > 0)
